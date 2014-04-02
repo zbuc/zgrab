@@ -417,6 +417,7 @@ type serverHelloMsg struct {
 	nextProtos        []string
 	ocspStapling      bool
 	ticketSupported   bool
+	extendedRandom    []byte
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -514,6 +515,16 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[1] = byte(extensionSessionTicket)
 		z = z[4:]
 	}
+	if len(m.extendedRandom) > 0 {
+		z[0] = byte(extensionExtendedRandom >> 8)
+		z[1] = byte(extensionExtendedRandom)
+		l := len(m.extendedRandom)
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		z = z[4:]
+		copy(z, m.extendedRandom)
+		z = z[l:]
+	}
 
 	m.raw = x
 
@@ -593,6 +604,8 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.ticketSupported = true
+		case extensionExtendedRandom:
+			m.extendedRandom = data[:length]
 		}
 		data = data[length:]
 	}

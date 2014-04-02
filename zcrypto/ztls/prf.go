@@ -132,12 +132,24 @@ func prfForVersion(version uint16) func(result, secret, label, seed []byte) {
 
 // masterFromPreMasterSecret generates the master secret from the pre-master
 // secret. See http://tools.ietf.org/html/rfc5246#section-8.1
-func masterFromPreMasterSecret(version uint16, preMasterSecret, clientRandom, serverRandom []byte) []byte {
-	var seed [tlsRandomLength * 2]byte
-	copy(seed[0:len(clientRandom)], clientRandom)
-	copy(seed[len(clientRandom):], serverRandom)
+func masterFromPreMasterSecret(version uint16, preMasterSecret, clientRandom, serverRandom, clientExtended, serverExtended []byte) []byte {
+	extendedLength := len(clientExtended)
+	seed := make([]byte, tlsRandomLength * 2 + extendedLength * 2)
+	s := seed[:]
+	copy(s[0:len(clientRandom)], clientRandom)
+	s = s[len(clientRandom):]
+	if extendedLength > 0 {
+		copy(s, clientExtended)
+		s = s[extendedLength:]
+	}
+	copy(s, serverRandom)
+	s = s[len(serverRandom):]
+	if extendedLength > 0 {
+		copy(s, serverExtended)
+		s = s[extendedLength:]
+	}
 	masterSecret := make([]byte, masterSecretLength)
-	prfForVersion(version)(masterSecret, preMasterSecret, masterSecretLabel, seed[0:])
+	prfForVersion(version)(masterSecret, preMasterSecret, masterSecretLabel, seed)
 	return masterSecret
 }
 

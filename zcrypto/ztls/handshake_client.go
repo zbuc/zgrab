@@ -30,6 +30,7 @@ func (c *Conn) clientHandshake() error {
 		supportedCurves:    []uint16{curveP256, curveP384, curveP521},
 		supportedPoints:    []uint8{pointFormatUncompressed},
 		nextProtoNeg:       len(c.config.NextProtos) > 0,
+		extendedRandom:     make([]byte, 32),
 	}
 
 	possibleCipherSuites := c.config.cipherSuites()
@@ -61,6 +62,8 @@ NextCipherSuite:
 		c.sendAlert(alertInternalError)
 		return errors.New("short read from Rand")
 	}
+
+	_, err = io.ReadFull(c.config.rand(), hello.extendedRandom[:])
 
 	if hello.vers >= VersionTLS12 {
 		hello.signatureAndHashes = supportedSKXSignatureAlgorithms
@@ -97,6 +100,10 @@ NextCipherSuite:
 	if !hello.nextProtoNeg && serverHello.nextProtoNeg {
 		c.sendAlert(alertHandshakeFailure)
 		return errors.New("server advertised unrequested NPN")
+	}
+
+	if len(hello.extendedRandom) != len(serverHello.extendedRandom) {
+		c.sendAlert(alertUnexpectedMessage)
 	}
 
 	suite := mutualCipherSuite(c.config.cipherSuites(), serverHello.cipherSuite)
@@ -332,7 +339,7 @@ NextCipherSuite:
 		c.writeRecord(recordTypeHandshake, certVerify.marshal())
 	}
 
-	masterSecret := masterFromPreMasterSecret(c.vers, preMasterSecret, hello.random, serverHello.random)
+	masterSecret := masterFromPreMasterSecret(c.vers, preMasterSecret, hello.random, serverHello.random, hello.extendedRandom, serverHello.extendedRandom)
 	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
 		keysFromMasterSecret(c.vers, masterSecret, hello.random, serverHello.random, suite.macLen, suite.keyLen, suite.ivLen)
 
