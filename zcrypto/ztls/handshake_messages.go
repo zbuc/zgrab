@@ -6,6 +6,8 @@ package ztls
 
 import "bytes"
 
+import "log"
+
 type clientHelloMsg struct {
 	raw                []byte
 	vers               uint16
@@ -606,6 +608,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 			m.ticketSupported = true
 		case extensionExtendedRandom:
 			m.extendedRandom = data[:length]
+			log.Print("Found Extended Random!")
 		}
 		data = data[length:]
 	}

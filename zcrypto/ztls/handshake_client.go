@@ -102,7 +102,7 @@ NextCipherSuite:
 		return errors.New("server advertised unrequested NPN")
 	}
 
-	if len(hello.extendedRandom) != len(serverHello.extendedRandom) {
+	if (len(hello.extendedRandom) != len(serverHello.extendedRandom)) && (len(serverHello.extendedRandom) > 0) {
 		c.sendAlert(alertUnexpectedMessage)
 	}
 
@@ -339,7 +339,16 @@ NextCipherSuite:
 		c.writeRecord(recordTypeHandshake, certVerify.marshal())
 	}
 
-	masterSecret := masterFromPreMasterSecret(c.vers, preMasterSecret, hello.random, serverHello.random, hello.extendedRandom, serverHello.extendedRandom)
+
+	var clientExtendedRandom, serverExtendedRandom []byte
+	if len(serverHello.extendedRandom) > 0 {
+		clientExtendedRandom = hello.extendedRandom
+		serverExtendedRandom = serverHello.extendedRandom
+	} else {
+		clientExtendedRandom = make([]byte, 0)
+		serverExtendedRandom = make([]byte, 0)
+	}
+	masterSecret := masterFromPreMasterSecret(c.vers, preMasterSecret, hello.random, serverHello.random, clientExtendedRandom, serverExtendedRandom)
 	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
 		keysFromMasterSecret(c.vers, masterSecret, hello.random, serverHello.random, suite.macLen, suite.keyLen, suite.ivLen)
 
