@@ -72,6 +72,7 @@ var (
 	extensionSignatureAlgorithms uint16 = 13
 	extensionSessionTicket       uint16 = 35
 	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
+	extensionExtendedRandom      uint16 = 0x0028
 )
 
 // TLS Elliptic Curves
