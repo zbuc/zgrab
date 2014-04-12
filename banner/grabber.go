@@ -18,7 +18,7 @@ type Result struct {
 }
 
 type GrabConfig struct {
-	Udp, Tls, SendMessage bool
+	Udp, Tls, SendMessage, StartTls, ReadFirst bool
 	Port uint16
 	Timeout int
 	Message string
@@ -48,6 +48,34 @@ func makeDialer(config *GrabConfig) ( func(rhost string) (net.Conn, TlsLog, erro
 			if nconn, err := dialer.Dial(network, rhost); err != nil {
 				return nconn, nil, err
 			} else {
+				if config.ReadFirst {
+					res := make([]byte, 1024)
+					// TODO add logging
+					if _, err := nconn.Read(res); err != nil {
+						log.Print("failed first read")
+						return nconn, nil, err
+					}
+				}
+				if config.StartTls {
+					res := make([]byte, 1024)
+					if _, err := nconn.Write([]byte("EHLO\n")); err != nil {
+						log.Print("failed EHLO")
+						return nconn, nil, err
+					}
+					if _, err := nconn.Read(res); err != nil {
+						// TODO Validate server likes it
+						log.Print("failed EHLO read")
+						return nconn, nil, err
+					}
+					if _, err := nconn.Write([]byte("STARTTLS\n")); err != nil {
+						log.Print("failed starttls");
+					}
+					if n, err := nconn.Read(res); err != nil {
+						log.Print("failed starttls read")
+					} else {
+						log.Print(string(res[0:n]))
+					}
+				}
 				conn = ztls.Client(nconn, tlsConfig)
 				conn.SetDeadline(deadline)
 				err = conn.Handshake()
