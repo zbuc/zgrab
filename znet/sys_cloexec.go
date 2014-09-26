@@ -7,7 +7,7 @@
 
 // +build darwin dragonfly nacl netbsd openbsd solaris
 
-package net
+package znet
 
 import "syscall"
 

@@ -4,7 +4,7 @@
 
 // +build nacl plan9 solaris
 
-package net
+package znet
 
 // If the ifindex is zero, interfaceTable returns mappings of all
 // network interfaces.  Otherwise it returns a mapping of a specific

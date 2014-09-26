@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package net
+package znet
 
 // IPAddr represents the address of an IP end point.
 type IPAddr struct {

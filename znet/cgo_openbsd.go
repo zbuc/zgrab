@@ -4,7 +4,7 @@
 
 // +build cgo,!netgo
 
-package net
+package znet
 
 /*
 #include <netdb.h>

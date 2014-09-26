@@ -6,7 +6,7 @@
 
 // Internet protocol family sockets for POSIX
 
-package net
+package znet
 
 import (
 	"syscall"

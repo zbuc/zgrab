@@ -37,7 +37,7 @@ The Listen function creates servers:
 		go handleConnection(conn)
 	}
 */
-package net
+package znet
 
 // TODO(rsc):
 //	support for raw ethernet sockets

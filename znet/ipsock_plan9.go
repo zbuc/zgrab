@@ -4,7 +4,7 @@
 
 // Internet protocol family sockets for Plan 9
 
-package net
+package znet
 
 import (
 	"errors"

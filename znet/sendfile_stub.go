@@ -4,7 +4,7 @@
 
 // +build darwin nacl netbsd openbsd solaris
 
-package net
+package znet
 
 import "io"
 

@@ -243,7 +243,7 @@ func TestUnexpectedError(t *testing.T) {
 	ServeConn(srv)                                                    // must return, not loop
 }
 
-// Copied from package net.
+// Copied from package znet.
 func myPipe() (*pipe, *pipe) {
 	r1, w1 := io.Pipe()
 	r2, w2 := io.Pipe()

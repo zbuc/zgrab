@@ -7,7 +7,7 @@
 
 // +build freebsd linux
 
-package net
+package znet
 
 import "syscall"
 

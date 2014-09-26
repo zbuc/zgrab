@@ -4,7 +4,7 @@
 
 // +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
 
-package net
+package znet
 
 import (
 	"io"

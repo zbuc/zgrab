@@ -4,7 +4,7 @@
 
 // +build darwin dragonfly freebsd nacl netbsd openbsd
 
-package net
+package znet
 
 import (
 	"runtime"

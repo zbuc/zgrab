@@ -5,7 +5,7 @@
 // This file implements API tests across platforms and will never have a build
 // tag.
 
-package net
+package znet
 
 import (
 	"io/ioutil"

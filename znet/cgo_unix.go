@@ -5,7 +5,7 @@
 // +build !netgo
 // +build darwin dragonfly freebsd linux netbsd openbsd
 
-package net
+package znet
 
 /*
 #include <sys/types.h>

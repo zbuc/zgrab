@@ -4,7 +4,7 @@
 
 // +build windows plan9
 
-package net
+package znet
 
 import (
 	"time"

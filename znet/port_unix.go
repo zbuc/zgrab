@@ -6,7 +6,7 @@
 
 // Read system port mappings from /etc/services
 
-package net
+package znet
 
 import "sync"
 

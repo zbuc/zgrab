@@ -10,7 +10,7 @@
 // This library accepts either size of byte slice but always
 // returns 16-byte addresses.
 
-package net
+package znet
 
 import "errors"
 

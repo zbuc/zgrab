@@ -5,7 +5,7 @@
 // +build !race
 // +build windows
 
-package net
+package znet
 
 import (
 	"unsafe"

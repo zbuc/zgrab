@@ -4,7 +4,7 @@
 
 // Network service port manipulations
 
-package net
+package znet
 
 // parsePort parses port as a network service port number for both
 // TCP and UDP.

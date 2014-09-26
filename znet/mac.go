@@ -4,7 +4,7 @@
 
 // MAC address manipulations
 
-package net
+package znet
 
 import "errors"
 

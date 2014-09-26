@@ -4,7 +4,7 @@
 
 // +build freebsd linux nacl netbsd
 
-package net
+package znet
 
 import (
 	"os"

@@ -4,7 +4,7 @@
 
 // +build !nacl,!plan9,!windows
 
-package net
+package znet
 
 import (
 	"bytes"

@@ -4,7 +4,7 @@
 
 // +build !plan9
 
-package net
+package znet
 
 import (
 	"runtime"

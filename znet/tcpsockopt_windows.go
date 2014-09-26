@@ -4,7 +4,7 @@
 
 // TCP socket options for windows
 
-package net
+package znet
 
 import (
 	"os"

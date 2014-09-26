@@ -4,7 +4,7 @@
 
 // TCP socket options for solaris
 
-package net
+package znet
 
 import (
 	"os"

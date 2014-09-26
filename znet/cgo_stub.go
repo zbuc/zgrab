@@ -6,7 +6,7 @@
 
 // Stub cgo routines for systems that do not use cgo to do network lookups.
 
-package net
+package znet
 
 func cgoLookupHost(name string) (addrs []string, err error, completed bool) {
 	return nil, nil, false

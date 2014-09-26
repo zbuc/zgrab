@@ -4,7 +4,7 @@
 
 // +build darwin dragonfly freebsd linux netbsd openbsd windows solaris
 
-package net
+package znet
 
 import (
 	"sync"

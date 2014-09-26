@@ -229,7 +229,7 @@ func validCookieDomain(v string) bool {
 
 // isCookieDomainName returns whether s is a valid domain name or a valid
 // domain name with a leading dot '.'.  It is almost a direct copy of
-// package net's isDomainName.
+// package znet's isDomainName.
 func isCookieDomainName(s string) bool {
 	if len(s) == 0 {
 		return false
@@ -251,7 +251,7 @@ func isCookieDomainName(s string) bool {
 		default:
 			return false
 		case 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z':
-			// No '_' allowed here (in contrast to package net).
+			// No '_' allowed here (in contrast to package znet).
 			ok = true
 			partlen++
 		case '0' <= c && c <= '9':

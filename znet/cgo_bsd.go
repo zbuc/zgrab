@@ -5,7 +5,7 @@
 // +build !netgo
 // +build darwin dragonfly freebsd solaris
 
-package net
+package znet
 
 /*
 #include <netdb.h>

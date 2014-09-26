@@ -6,7 +6,7 @@
 
 // Read system DNS config from /etc/resolv.conf
 
-package net
+package znet
 
 type dnsConfig struct {
 	servers  []string // servers to use

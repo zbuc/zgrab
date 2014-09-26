@@ -4,7 +4,7 @@
 
 // TCP socket options for plan9
 
-package net
+package znet
 
 import (
 	"time"

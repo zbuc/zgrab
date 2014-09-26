@@ -4,7 +4,7 @@
 
 // +build solaris
 
-package net
+package znet
 
 import "syscall"
 

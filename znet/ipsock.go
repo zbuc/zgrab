@@ -4,7 +4,7 @@
 
 // Internet protocol family sockets
 
-package net
+package znet
 
 import (
 	"errors"

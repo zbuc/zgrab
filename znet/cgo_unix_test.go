@@ -5,7 +5,7 @@
 // +build cgo,!netgo
 // +build darwin dragonfly freebsd linux netbsd openbsd
 
-package net
+package znet
 
 import "testing"
 

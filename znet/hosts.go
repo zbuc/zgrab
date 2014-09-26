@@ -4,7 +4,7 @@
 
 // Read static host/IP entries from /etc/hosts.
 
-package net
+package znet
 
 import (
 	"sync"

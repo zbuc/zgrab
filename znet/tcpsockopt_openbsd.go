@@ -4,7 +4,7 @@
 
 // TCP socket options for openbsd
 
-package net
+package znet
 
 import (
 	"os"

@@ -5,7 +5,7 @@
 // Simple file i/o and string manipulation, to avoid
 // depending on strconv and bufio and strings.
 
-package net
+package znet
 
 import (
 	"io"

@@ -4,7 +4,7 @@
 
 // TCP socket options for darwin
 
-package net
+package znet
 
 import (
 	"os"
