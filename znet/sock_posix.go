@@ -36,7 +36,7 @@ type sockaddr interface {
 
 // socket returns a network file descriptor that is ready for
 // asynchronous I/O using the network poller.
-func socket(net string, family, sotype, proto int, ipv6only bool, laddr, raddr sockaddr, deadline time.Time, toAddr func(syscall.Sockaddr) Addr) (fd *netFD, err error) {
+func socket(net, iface string, family, sotype, proto int, ipv6only bool, laddr, raddr sockaddr, deadline time.Time, toAddr func(syscall.Sockaddr) Addr) (fd *netFD, err error) {
 	s, err := sysSocket(family, sotype, proto)
 	if err != nil {
 		return nil, err
@@ -44,6 +44,13 @@ func socket(net string, family, sotype, proto int, ipv6only bool, laddr, raddr s
 	if err = setDefaultSockopts(s, family, sotype, ipv6only); err != nil {
 		closesocket(s)
 		return nil, err
+	}
+	// Bind to the correct network interface, if given
+	if iface != "" {
+		if err = setInterfaceSockopts(s, iface); err != nil {
+			closesocket(s)
+			return nil, err
+		}
 	}
 	if fd, err = newFD(s, family, sotype, net); err != nil {
 		closesocket(s)

@@ -50,6 +50,10 @@ type Dialer struct {
 	// If zero, keep-alives are not enabled. Network protocols
 	// that do not support keep-alives ignore this field.
 	KeepAlive time.Duration
+
+	// Interface specifies the network interface to bind the
+	// connection to.
+	// If empty, the interface 
 }
 
 // Return either now+Timeout or Deadline, whichever comes first.

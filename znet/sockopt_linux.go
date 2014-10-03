@@ -30,3 +30,7 @@ func setDefaultMulticastSockopts(s int) error {
 	// concurrently across multiple listeners.
 	return os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1))
 }
+
+func setInterfaceSockopt(s int, iface string) error {
+	return os.NewSyscallError("setsockopt", syscall.SetsockoptString(s, syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, iface))
+}

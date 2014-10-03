@@ -49,7 +49,7 @@ func unixSocket(net string, laddr, raddr sockaddr, mode string, deadline time.Ti
 		f = sockaddrToUnixpacket
 	}
 
-	fd, err := socket(net, syscall.AF_UNIX, sotype, 0, false, laddr, raddr, deadline, f)
+	fd, err := socket(net, "", syscall.AF_UNIX, sotype, 0, false, laddr, raddr, deadline, f)
 	if err != nil {
 		return nil, err
 	}
