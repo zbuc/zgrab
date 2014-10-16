@@ -88,10 +88,11 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 	}
 	// Wrap the whole thing in a logger
 	return func(c *Conn) ([]StateLog, error) {
+		rh := c.RemoteAddr()
 		err := g(c)
 		if err != nil {
 			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
-				c.RemoteAddr().String(), err.Error())
+				rh, err.Error())
 		}
 		return c.States(), err
 	}
