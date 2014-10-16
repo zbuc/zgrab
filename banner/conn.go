@@ -99,6 +99,25 @@ func (c *Conn) Close() error {
 	return c.getUnderlyingConn().Close()
 }
 
+func (c *Conn) ReDial() error {
+	var err error
+	address := c.RemoteAddr().String()
+	//la := c.LocalAddr()
+	c.tlsConn = nil
+	c.isTls = false
+	netDialer := net.Dialer{
+		Deadline: c.readDeadline,
+	}
+	c.conn, err = netDialer.Dial("tcp", address)
+	cs := connectState{
+		protocol:   "tcp",
+		remoteHost: address,
+		err:        err,
+	}
+	c.operations = append(c.operations, &cs)
+	return err
+}
+
 // Extra method - Do a TLS Handshake and record progress
 func (c *Conn) TlsHandshake() error {
 	if c.isTls {

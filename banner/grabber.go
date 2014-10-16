@@ -1,12 +1,13 @@
 package banner
 
 import (
-	"bytes"
 	"crypto/x509"
 	"log"
 	"net"
 	"strconv"
 	"time"
+
+	"../zcrypto/ztls"
 )
 
 type GrabConfig struct {
@@ -66,74 +67,22 @@ func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
-		banner := make([]byte, 1024)
-		response := make([]byte, 65536)
+		//banner := make([]byte, 1024)
+		//response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
 		c.SetCbcOnly() // XXX THIS IS TERRIBLE
-		if config.Tls {
-			if err := c.TlsHandshake(); err != nil {
-				return err
-			}
+		c.maxTlsVersion = ztls.VersionSSL30
+		if err := c.TlsHandshake(); err == nil {
+			c.Close()
 		}
-		if config.Banners {
-			if config.Smtp {
-				if _, err := c.SmtpBanner(banner); err != nil {
-					return err
-				}
-			} else if config.Pop3 {
-				if _, err := c.Pop3Banner(banner); err != nil {
-					return err
-				}
-			} else if config.Imap {
-				if _, err := c.ImapBanner(banner); err != nil {
-					return err
-				}
-			} else {
-				if _, err := c.Read(banner); err != nil {
-					return err
-				}
-			}
+		if err := c.ReDial(); err != nil {
+			log.Print("whoops")
+			log.Print(err)
+			return err
 		}
-		if config.SendMessage {
-			dest := []byte(c.RemoteAddr().String())
-			msg := bytes.Replace(config.Message, []byte("%s"), dest, -1)
-			if _, err := c.Write(msg); err != nil {
-				return err
-			}
-			if _, err := c.Read(response); err != nil {
-				return err
-			}
-		}
-		if config.Ehlo {
-			if err := c.Ehlo(config.EhloDomain); err != nil {
-				return err
-			}
-		}
-		if config.SmtpHelp {
-			if err := c.SmtpHelp(); err != nil {
-				return err
-			}
-		}
-		if config.StartTls {
-			if config.Imap {
-				if err := c.ImapStarttlsHandshake(); err != nil {
-					return err
-				}
-			} else if config.Pop3 {
-				if err := c.Pop3StarttlsHandshake(); err != nil {
-					return err
-				}
-			} else {
-				if err := c.SmtpStarttlsHandshake(); err != nil {
-					return err
-				}
-			}
-		}
-		if config.Heartbleed {
-			buf := make([]byte, 256)
-			if _, err := c.SendHeartbleedProbe(buf); err != nil {
-				return err
-			}
+		c.maxTlsVersion = ztls.VersionTLS12
+		if err := c.TlsHandshake(); err != nil {
+			return err
 		}
 		return nil
 	}
