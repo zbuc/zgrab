@@ -74,10 +74,12 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 		if err := c.TlsHandshake(); err == nil {
 			c.Close()
 		}
-		c.SetDeadline(time.Now().Add(config.Timeout))
+		deadline := time.Now().Add(config.Timeout)
+		c.SetDeadline(deadline)
 		if err := c.ReDial(); err != nil {
 			return err
 		}
+		c.SetDeadline(deadline)
 		c.maxTlsVersion = ztls.VersionTLS12
 		if err := c.TlsHandshake(); err != nil {
 			return err
