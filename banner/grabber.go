@@ -70,14 +70,12 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 		//banner := make([]byte, 1024)
 		//response := make([]byte, 65536)
 		c.SetCAPool(config.RootCAPool)
-		c.SetCbcOnly() // XXX THIS IS TERRIBLE
 		c.maxTlsVersion = ztls.VersionSSL30
 		if err := c.TlsHandshake(); err == nil {
 			c.Close()
 		}
+		c.SetDeadline(time.Now().Add(config.Timeout))
 		if err := c.ReDial(); err != nil {
-			log.Print("whoops")
-			log.Print(err)
 			return err
 		}
 		c.maxTlsVersion = ztls.VersionTLS12
