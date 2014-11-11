@@ -66,33 +66,39 @@ type cipherSuite struct {
 	aead   func(key, fixedNonce []byte) cipher.AEAD
 }
 
+//var cipherSuites = []*cipherSuite{
+//	// Ciphersuite order is chosen so that ECDHE comes before plain RSA
+//	// and RC4 comes before AES (because of the Lucky13 attack).
+//	{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheRSAKA, suiteECDHE | suiteTLS12, nil, nil, aeadAESGCM},
+//	{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheECDSAKA, suiteECDHE | suiteECDSA | suiteTLS12, nil, nil, aeadAESGCM},
+//	{TLS_ECDHE_RSA_WITH_RC4_128_SHA, 16, 20, 0, ecdheRSAKA, suiteECDHE, cipherRC4, macSHA1, nil},
+//	{TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, 16, 20, 0, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherRC4, macSHA1, nil},
+//	{TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, 16, 20, 16, ecdheRSAKA, suiteECDHE, cipherAES, macSHA1, nil},
+//	{TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, 16, 20, 16, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherAES, macSHA1, nil},
+//	{TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdheRSAKA, suiteECDHE, cipherAES, macSHA1, nil},
+//	{TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherAES, macSHA1, nil},
+//	{TLS_RSA_WITH_RC4_128_SHA, 16, 20, 0, rsaKA, 0, cipherRC4, macSHA1, nil},
+//	{TLS_RSA_WITH_AES_128_CBC_SHA, 16, 20, 16, rsaKA, 0, cipherAES, macSHA1, nil},
+//	{TLS_RSA_WITH_AES_256_CBC_SHA, 32, 20, 16, rsaKA, 0, cipherAES, macSHA1, nil},
+//	{TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, ecdheRSAKA, suiteECDHE, cipher3DES, macSHA1, nil},
+//	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
+//}
+
+
 var cipherSuites = []*cipherSuite{
-	// Ciphersuite order is chosen so that ECDHE comes before plain RSA
-	// and RC4 comes before AES (because of the Lucky13 attack).
-	{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheRSAKA, suiteECDHE | suiteTLS12, nil, nil, aeadAESGCM},
-	{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, ecdheECDSAKA, suiteECDHE | suiteECDSA | suiteTLS12, nil, nil, aeadAESGCM},
-	{TLS_ECDHE_RSA_WITH_RC4_128_SHA, 16, 20, 0, ecdheRSAKA, suiteECDHE, cipherRC4, macSHA1, nil},
-	{TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, 16, 20, 0, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherRC4, macSHA1, nil},
-	{TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, 16, 20, 16, ecdheRSAKA, suiteECDHE, cipherAES, macSHA1, nil},
-	{TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, 16, 20, 16, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherAES, macSHA1, nil},
-	{TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdheRSAKA, suiteECDHE, cipherAES, macSHA1, nil},
-	{TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, 32, 20, 16, ecdheECDSAKA, suiteECDHE | suiteECDSA, cipherAES, macSHA1, nil},
+	{TLS_RSA_WITH_AES_128_GCM_SHA256, 16, 0, 4, rsaKA, 0, nil, nil, aeadAESGCM},
 	{TLS_RSA_WITH_RC4_128_SHA, 16, 20, 0, rsaKA, 0, cipherRC4, macSHA1, nil},
-	{TLS_RSA_WITH_AES_128_CBC_SHA, 16, 20, 16, rsaKA, 0, cipherAES, macSHA1, nil},
-	{TLS_RSA_WITH_AES_256_CBC_SHA, 32, 20, 16, rsaKA, 0, cipherAES, macSHA1, nil},
-	{TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, ecdheRSAKA, suiteECDHE, cipher3DES, macSHA1, nil},
-	{TLS_RSA_WITH_3DES_EDE_CBC_SHA, 24, 20, 8, rsaKA, 0, cipher3DES, macSHA1, nil},
 }
 
 var CbcSuiteIds = []uint16{
-	TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-	TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-	TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-	TLS_RSA_WITH_AES_128_CBC_SHA,
-	TLS_RSA_WITH_AES_256_CBC_SHA,
-	TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-	TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+//	TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+//	TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+//	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+//	TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+//	TLS_RSA_WITH_AES_128_CBC_SHA,
+//	TLS_RSA_WITH_AES_256_CBC_SHA,
+//	TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+//	TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 }
 
 func cipherRC4(key, iv []byte, isRead bool) interface{} {
@@ -266,16 +272,5 @@ func mutualCipherSuite(have []uint16, want uint16) *cipherSuite {
 // http://www.iana.org/assignments/tls-parameters/tls-parameters.xml
 const (
 	TLS_RSA_WITH_RC4_128_SHA                uint16 = 0x0005
-	TLS_RSA_WITH_3DES_EDE_CBC_SHA           uint16 = 0x000a
-	TLS_RSA_WITH_AES_128_CBC_SHA            uint16 = 0x002f
-	TLS_RSA_WITH_AES_256_CBC_SHA            uint16 = 0x0035
-	TLS_ECDHE_ECDSA_WITH_RC4_128_SHA        uint16 = 0xc007
-	TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA    uint16 = 0xc009
-	TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA    uint16 = 0xc00a
-	TLS_ECDHE_RSA_WITH_RC4_128_SHA          uint16 = 0xc011
-	TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA     uint16 = 0xc012
-	TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA      uint16 = 0xc013
-	TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA      uint16 = 0xc014
-	TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256   uint16 = 0xc02f
-	TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 uint16 = 0xc02b
+	TLS_RSA_WITH_AES_128_GCM_SHA256         uint16 = 0x009C
 )
