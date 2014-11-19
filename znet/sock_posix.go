@@ -47,7 +47,7 @@ func socket(net, iface string, family, sotype, proto int, ipv6only bool, laddr, 
 	}
 	// Bind to the correct network interface, if given
 	if iface != "" {
-		if err = setInterfaceSockopts(s, iface); err != nil {
+		if err = setInterfaceSockopt(s, iface); err != nil {
 			closesocket(s)
 			return nil, err
 		}

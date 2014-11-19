@@ -174,8 +174,8 @@ func DialUDP(net string, laddr, raddr *UDPAddr) (*UDPConn, error) {
 	return dialUDP(net, "", laddr, raddr, noDeadline)
 }
 
-func dialUDP(net, iface string, laddr, raddr *UDPAddr, deadline time.Time) (*UDPConn, error) {
-	fd, err := internetSocket(net, iface, laddr, raddr, deadline, syscall.SOCK_DGRAM, 0, "dial", sockaddrToUDP)
+func dialUDP(net, intrface string, laddr, raddr *UDPAddr, deadline time.Time) (*UDPConn, error) {
+	fd, err := internetSocket(net, intrface, laddr, raddr, deadline, syscall.SOCK_DGRAM, 0, "dial", sockaddrToUDP)
 	if err != nil {
 		return nil, &OpError{Op: "dial", Net: net, Addr: raddr, Err: err}
 	}
@@ -189,7 +189,7 @@ func dialUDP(net, iface string, laddr, raddr *UDPAddr, deadline time.Time) (*UDP
 // discover the port.  The returned connection's ReadFrom and WriteTo
 // methods can be used to receive and send UDP packets with per-packet
 // addressing.
-func ListenUDP(net string, laddr *UDPAddr) (*UDPConn, error) {
+func ListenUDP(net string, laddr *UDPAddr, intrface string) (*UDPConn, error) {
 	switch net {
 	case "udp", "udp4", "udp6":
 	default:
@@ -198,7 +198,7 @@ func ListenUDP(net string, laddr *UDPAddr) (*UDPConn, error) {
 	if laddr == nil {
 		laddr = &UDPAddr{}
 	}
-	fd, err := internetSocket(net, "", laddr, nil, noDeadline, syscall.SOCK_DGRAM, 0, "listen", sockaddrToUDP)
+	fd, err := internetSocket(net, intrface, laddr, nil, noDeadline, syscall.SOCK_DGRAM, 0, "listen", sockaddrToUDP)
 	if err != nil {
 		return nil, &OpError{Op: "listen", Net: net, Addr: laddr, Err: err}
 	}
@@ -218,7 +218,7 @@ func ListenMulticastUDP(net string, ifi *Interface, gaddr *UDPAddr) (*UDPConn, e
 	if gaddr == nil || gaddr.IP == nil {
 		return nil, &OpError{Op: "listen", Net: net, Addr: nil, Err: errMissingAddress}
 	}
-	fd, err := internetSocket(net, gaddr, nil, noDeadline, syscall.SOCK_DGRAM, 0, "listen", sockaddrToUDP)
+	fd, err := internetSocket(net, "", gaddr, nil, noDeadline, syscall.SOCK_DGRAM, 0, "listen", sockaddrToUDP)
 	if err != nil {
 		return nil, &OpError{Op: "listen", Net: net, Addr: gaddr, Err: err}
 	}

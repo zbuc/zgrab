@@ -1,8 +1,9 @@
 package banner
 
 import (
-	"net"
+	"../znet"
 	"time"
+    "net"
 )
 
 type Dialer struct {
@@ -11,15 +12,17 @@ type Dialer struct {
 	LocalAddr net.Addr
 	DualStack bool
 	KeepAlive time.Duration
+    intrface  string
 }
 
-func (d *Dialer) Dial(network, address string) (*Conn, error) {
+func (d *Dialer) Dial(network, address string, intrface string) (*Conn, error) {
 	c := &Conn{operations: make([]ConnectionOperation, 0, 8)}
-	netDialer := net.Dialer {
+	netDialer := znet.Dialer {
 		Deadline: d.Deadline,
 		Timeout: d.Timeout,
 		LocalAddr: d.LocalAddr,
 		KeepAlive: d.KeepAlive,
+        intrface: eth0,
 	}
 	var err error
 	c.conn, err = netDialer.Dial(network, address)

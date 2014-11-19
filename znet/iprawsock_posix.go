@@ -182,10 +182,10 @@ func (c *IPConn) WriteMsgIP(b, oob []byte, addr *IPAddr) (n, oobn int, err error
 // netProto, which must be "ip", "ip4", or "ip6" followed by a colon
 // and a protocol number or name.
 func DialIP(netProto string, laddr, raddr *IPAddr) (*IPConn, error) {
-	return dialIP(netProto, laddr, raddr, noDeadline)
+	return dialIP(netProto, laddr, raddr, noDeadline, "")
 }
 
-func dialIP(netProto string, laddr, raddr *IPAddr, deadline time.Time) (*IPConn, error) {
+func dialIP(netProto string, laddr, raddr *IPAddr, deadline time.Time, intrface string) (*IPConn, error) {
 	net, proto, err := parseNetwork(netProto)
 	if err != nil {
 		return nil, &OpError{Op: "dial", Net: netProto, Addr: raddr, Err: err}
@@ -198,7 +198,7 @@ func dialIP(netProto string, laddr, raddr *IPAddr, deadline time.Time) (*IPConn,
 	if raddr == nil {
 		return nil, &OpError{Op: "dial", Net: netProto, Addr: nil, Err: errMissingAddress}
 	}
-	fd, err := internetSocket(net, "", laddr, raddr, deadline, syscall.SOCK_RAW, proto, "dial", sockaddrToIP)
+	fd, err := internetSocket(net, intrface, laddr, raddr, deadline, syscall.SOCK_RAW, proto, "dial", sockaddrToIP)
 	if err != nil {
 		return nil, &OpError{Op: "dial", Net: netProto, Addr: raddr, Err: err}
 	}
@@ -209,7 +209,7 @@ func dialIP(netProto string, laddr, raddr *IPAddr, deadline time.Time) (*IPConn,
 // address laddr.  The returned connection's ReadFrom and WriteTo
 // methods can be used to receive and send IP packets with per-packet
 // addressing.
-func ListenIP(netProto string, laddr *IPAddr) (*IPConn, error) {
+func ListenIP(netProto string, laddr *IPAddr, intrface string) (*IPConn, error) {
 	net, proto, err := parseNetwork(netProto)
 	if err != nil {
 		return nil, &OpError{Op: "dial", Net: netProto, Addr: laddr, Err: err}
@@ -219,7 +219,7 @@ func ListenIP(netProto string, laddr *IPAddr) (*IPConn, error) {
 	default:
 		return nil, &OpError{Op: "listen", Net: netProto, Addr: laddr, Err: UnknownNetworkError(netProto)}
 	}
-	fd, err := internetSocket(net, "", laddr, nil, noDeadline, syscall.SOCK_RAW, proto, "listen", sockaddrToIP)
+	fd, err := internetSocket(net, intrface, laddr, nil, noDeadline, syscall.SOCK_RAW, proto, "listen", sockaddrToIP)
 	if err != nil {
 		return nil, &OpError{Op: "listen", Net: netProto, Addr: laddr, Err: err}
 	}

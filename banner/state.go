@@ -18,6 +18,7 @@ type connectState struct {
 	protocol string
 	remoteHost string
 	err error
+    intrface string
 }
 
 func (cs *connectState) StateLog() StateLog {

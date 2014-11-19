@@ -105,7 +105,7 @@ func tryOneName(cfg *dnsConfig, name string, qtype uint16) (cname string, addrs 
 		// all the cfg.servers[i] are IP addresses, which
 		// Dial will use without a DNS lookup.
 		server := cfg.servers[i] + ":53"
-		c, cerr := Dial("udp", server)
+		c, cerr := Dial("udp", server, "")
 		if cerr != nil {
 			err = cerr
 			continue
@@ -117,7 +117,7 @@ func tryOneName(cfg *dnsConfig, name string, qtype uint16) (cname string, addrs 
 			continue
 		}
 		if msg.truncated { // see RFC 5966
-			c, cerr = Dial("tcp", server)
+			c, cerr = Dial("tcp", server, "")
 			if cerr != nil {
 				err = cerr
 				continue
