@@ -1,56 +1,67 @@
 package banner
 
 import (
+	"bytes"
+	"crypto/x509"
 	"log"
 	"net"
-	"time"
 	"strconv"
-	"bytes"
+	"time"
 )
 
+type GrabTarget struct {
+	Addr   net.IP
+	Domain string
+}
+
 type GrabConfig struct {
-	Tls bool
-	Banners bool
-	SendMessage bool
+	Tls          bool
+	TlsVersion   uint16
+	Banners      bool
+	SendMessage  bool
 	ReadResponse bool
-	Smtp bool
-	Ehlo bool
-	SmtpHelp bool
-	StartTls bool
-	Imap bool
-	Pop3 bool
-	Heartbleed bool
-	Port uint16
-	Timeout time.Duration
-	Message []byte
-	EhloDomain string
-	Protocol string
-	ErrorLog *log.Logger
-	LocalAddr net.Addr
+	Smtp         bool
+	Ehlo         bool
+	SmtpHelp     bool
+	StartTls     bool
+	Imap         bool
+	Pop3         bool
+	Heartbleed   bool
+	Port         uint16
+	Timeout      time.Duration
+	Message      []byte
+	EhloDomain   string
+	Protocol     string
+	ErrorLog     *log.Logger
+	LocalAddr    net.Addr
+	RootCAPool   *x509.CertPool
+	CbcOnly      bool
 }
 
 type Grab struct {
-	Host string `json:"host"`
-	Port uint16 `json:"port"`
-	Time time.Time `json:"timestamp"`
-	Log []StateLog `json:"log"`
+	Host   string     `json:"host"`
+	Domain *string    `json:"domain"`
+	Port   uint16     `json:"port"`
+	Time   time.Time  `json:"timestamp"`
+	Log    []StateLog `json:"log"`
 }
 
 type Progress struct {
 	Success uint
-	Error uint
-	Total uint
+	Error   uint
+	Total   uint
 }
 
-func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
+func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 	proto := c.Protocol
 	timeout := c.Timeout
 	return func(addr string) (*Conn, error) {
 		deadline := time.Now().Add(timeout)
-		d := Dialer {
+		d := Dialer{
 			Deadline: deadline,
 		}
 		conn, err := d.Dial(proto, addr)
+		conn.maxTlsVersion = c.TlsVersion
 		if err == nil {
 			conn.SetDeadline(deadline)
 		}
@@ -58,11 +69,15 @@ func makeDialer(c *GrabConfig) (func(string) (*Conn, error)) {
 	}
 }
 
-func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
+func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 	// Do all the hard work here
 	g := func(c *Conn) error {
 		banner := make([]byte, 1024)
 		response := make([]byte, 65536)
+		c.SetCAPool(config.RootCAPool)
+		if config.CbcOnly {
+			c.SetCbcOnly()
+		}
 		if config.Tls {
 			if err := c.TlsHandshake(); err != nil {
 				return err
@@ -88,8 +103,9 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 			}
 		}
 		if config.SendMessage {
-			dest := []byte(c.RemoteAddr().String())
-			msg := bytes.Replace(config.Message, []byte("%s"), dest, -1)
+			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			msg := bytes.Replace(config.Message, []byte("%s"), []byte(host), -1)
+			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
 			if _, err := c.Write(msg); err != nil {
 				return err
 			}
@@ -132,7 +148,7 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	}
 	// Wrap the whole thing in a logger
 	return func(c *Conn) ([]StateLog, error) {
-		err := g(c);
+		err := g(c)
 		if err != nil {
 			config.ErrorLog.Printf("Conversation error with remote host %s: %s",
 				c.RemoteAddr().String(), err.Error())
@@ -141,22 +157,36 @@ func makeGrabber(config *GrabConfig) (func(*Conn) ([]StateLog, error)) {
 	}
 }
 
-func GrabBanner(addrChan chan net.IP, grabChan chan Grab, doneChan chan Progress, config *GrabConfig) {
+func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Progress, config *GrabConfig) {
 	dial := makeDialer(config)
 	grabber := makeGrabber(config)
 	port := strconv.FormatUint(uint64(config.Port), 10)
 	p := Progress{}
-	for ip := range addrChan {
+	for target := range addrChan {
 		p.Total += 1
-		addr := ip.String()
+		addr := target.Addr.String()
+		var domain *string
+		if target.Domain != "" {
+			d := target.Domain
+			domain = &d
+		}
 		rhost := net.JoinHostPort(addr, port)
 		t := time.Now()
 		conn, dialErr := dial(rhost)
+		if domain != nil {
+			conn.SetDomain(target.Domain)
+		}
 		if dialErr != nil {
 			// Could not connect to host
-			config.ErrorLog.Printf("Could not connect to remote host %s: %s",
-				addr, dialErr.Error())
-			grabChan <- Grab{addr, config.Port, t, conn.States()}
+			config.ErrorLog.Printf("Could not connect to %s remote host %s: %s",
+				target.Domain, addr, dialErr.Error())
+			grabChan <- Grab{
+				Host:   addr,
+				Domain: domain,
+				Port:   config.Port,
+				Time:   t,
+				Log:    conn.States(),
+			}
 			p.Error += 1
 			continue
 		}
@@ -166,7 +196,13 @@ func GrabBanner(addrChan chan net.IP, grabChan chan Grab, doneChan chan Progress
 		} else {
 			p.Success += 1
 		}
-		grabChan <- Grab{addr, config.Port, t, grabStates}
+		grabChan <- Grab{
+			Host:   addr,
+			Domain: domain,
+			Port:   config.Port,
+			Time:   t,
+			Log:    grabStates,
+		}
 	}
 	doneChan <- p
 }

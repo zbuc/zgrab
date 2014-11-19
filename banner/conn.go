@@ -1,12 +1,14 @@
 package banner
 
 import (
-	"../zcrypto/ztls"
-	"net"
-	"fmt"
-	"time"
-	"regexp"
+	"crypto/x509"
 	"errors"
+	"fmt"
+	"net"
+	"regexp"
+	"time"
+
+	"zgrab/zcrypto/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
@@ -20,23 +22,43 @@ const IMAP_COMMAND = "a001 STARTTLS\r\n"
 // Implements the net.Conn interface
 type Conn struct {
 	// Underlying network connection
-	conn net.Conn
+	conn    net.Conn
 	tlsConn *ztls.Conn
-	isTls bool
+	isTls   bool
+
+	// Max TLS version
+	maxTlsVersion uint16
 
 	// Keep track of state / network operations
 	operations []ConnectionOperation
 
 	// Cache the deadlines so we can reapply after TLS handshake
-	readDeadline time.Time
+	readDeadline  time.Time
 	writeDeadline time.Time
+
+	caPool  *x509.CertPool
+	cbcOnly bool
+
+	domain string
 }
 
-func (c *Conn) getUnderlyingConn() (net.Conn) {
+func (c *Conn) getUnderlyingConn() net.Conn {
 	if c.isTls {
 		return c.tlsConn
 	}
 	return c.conn
+}
+
+func (c *Conn) SetCbcOnly() {
+	c.cbcOnly = true
+}
+
+func (c *Conn) SetCAPool(pool *x509.CertPool) {
+	c.caPool = pool
+}
+
+func (c *Conn) SetDomain(domain string) {
+	c.domain = domain
 }
 
 // Layer in the regular conn methods
@@ -93,8 +115,15 @@ func (c *Conn) TlsHandshake() error {
 	tlsConfig := new(ztls.Config)
 	tlsConfig.InsecureSkipVerify = true
 	tlsConfig.MinVersion = ztls.VersionSSL30
-	tlsConfig.MaxVersion = ztls.VersionTLS12
+	tlsConfig.MaxVersion = c.maxTlsVersion
+	if c.domain != "" {
+		tlsConfig.ServerName = c.domain
+	}
+	if c.cbcOnly {
+		tlsConfig.CipherSuites = ztls.CbcSuiteIds
+	}
 	c.tlsConn = ztls.Client(c.conn, tlsConfig)
+	c.tlsConn.SetCAPool(c.caPool)
 	c.tlsConn.SetReadDeadline(c.readDeadline)
 	c.tlsConn.SetWriteDeadline(c.writeDeadline)
 	c.isTls = true
@@ -113,8 +142,8 @@ func (c *Conn) sendStarttlsCommand(command string) error {
 			c.RemoteAddr().String())
 	}
 	// Send the STARTTLS message
-	starttls := []byte(command);
-	_, err := c.conn.Write(starttls);
+	starttls := []byte(command)
+	_, err := c.conn.Write(starttls)
 	return err
 }
 
@@ -177,7 +206,7 @@ func (c *Conn) readUntilRegex(res []byte, expr *regexp.Regexp) (int, error) {
 	buf := res[0:]
 	length := 0
 	for finished := false; !finished; {
-		n, err := c.getUnderlyingConn().Read(buf);
+		n, err := c.getUnderlyingConn().Read(buf)
 		length += n
 		if err != nil {
 			return length, err
@@ -246,7 +275,7 @@ func (c *Conn) Pop3Banner(b []byte) (int, error) {
 	n, err := c.readPop3Response(b)
 	rs := readState{
 		response: b[0:n],
-		err: err,
+		err:      err,
 	}
 	c.operations = append(c.operations, &rs)
 	return n, err
@@ -258,9 +287,9 @@ func (c *Conn) readImapStatusResponse(res []byte) (int, error) {
 
 func (c *Conn) ImapBanner(b []byte) (int, error) {
 	n, err := c.readImapStatusResponse(b)
-	rs := readState {
+	rs := readState{
 		response: b[0:n],
-		err: err,
+		err:      err,
 	}
 	c.operations = append(c.operations, &rs)
 	return n, err

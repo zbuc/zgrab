@@ -1,16 +1,20 @@
 package main
 
 import (
+	"crypto/x509"
+	"encoding/csv"
 	"encoding/json"
-	"./banner"
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
+	"zgrab/banner"
+	"zgrab/zcrypto/ztls"
 )
 
 // Command-line flags
@@ -20,12 +24,14 @@ var (
 	logFileName, metadataFileName string
 	messageFileName               string
 	interfaceName                 string
-	ehlo string
+	ehlo                          string
 	portFlag                      uint
 	inputFile, metadataFile       *os.File
 	senders                       uint
-	udp bool
-	timeout uint
+	udp                           bool
+	timeout                       uint
+	tlsVersion                    string
+	rootCAFileName                string
 )
 
 // Module configurations
@@ -39,16 +45,18 @@ var (
 )
 
 type Summary struct {
-	Success uint			`json:"success_count"`
-	Error uint				`json:"error_count"`
-	Total uint				`json:"total"`
-	Protocol string `json:"protocol"`
-	Port uint16 `json:"port"`
-	Start time.Time `json:"start_time"`
-	End time.Time `json:"end_time"`
-	Duration time.Duration `json:"duration"`
-	Timeout uint `json:"timeout"`
-	Mail *string `json:"mail_type"`
+	Success    uint          `json:"success_count"`
+	Error      uint          `json:"error_count"`
+	Total      uint          `json:"total"`
+	Protocol   string        `json:"protocol"`
+	Port       uint16        `json:"port"`
+	Start      time.Time     `json:"start_time"`
+	End        time.Time     `json:"end_time"`
+	Duration   time.Duration `json:"duration"`
+	Timeout    uint          `json:"timeout"`
+	Mail       *string       `json:"mail_type"`
+	TlsVersion string        `json:"max_tls_version"`
+	CAFileName string        `json:"ca_file"`
 }
 
 // Pre-main bind flags to variables
@@ -63,6 +71,7 @@ func init() {
 	flag.UintVar(&portFlag, "port", 80, "Port to grab on")
 	flag.UintVar(&timeout, "timeout", 10, "Set connection timeout in seconds")
 	flag.BoolVar(&grabConfig.Tls, "tls", false, "Grab over TLS")
+	flag.StringVar(&tlsVersion, "tls-version", "", "Max TLS version to use (implies --tls)")
 	flag.BoolVar(&udp, "udp", false, "Grab over UDP")
 	flag.UintVar(&senders, "senders", 1000, "Number of send coroutines to use")
 	flag.BoolVar(&grabConfig.Banners, "banners", false, "Read banner upon connection creation")
@@ -74,7 +83,32 @@ func init() {
 	flag.BoolVar(&grabConfig.Imap, "imap", false, "Conform to IMAP rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Pop3, "pop3", false, "Conform to POP3 rules when sending STARTTLS")
 	flag.BoolVar(&grabConfig.Heartbleed, "heartbleed", false, "Check if server is vulnerable to Heartbleed (implies --tls)")
+	flag.StringVar(&rootCAFileName, "ca-file", "", "List of trusted root certificate authorities in PEM format")
+	flag.BoolVar(&grabConfig.CbcOnly, "cbc-only", false, "Send only ciphers that use CBC")
 	flag.Parse()
+
+	// Validate TLS Versions
+	tv := strings.ToUpper(tlsVersion)
+	if tv != "" {
+		grabConfig.Tls = true
+	}
+
+	switch tv {
+	case "SSLV3", "SSLV30", "SSLV3.0":
+		grabConfig.TlsVersion = ztls.VersionSSL30
+		tlsVersion = "SSLv3"
+	case "TLSV1", "TLSV10", "TLSV1.0":
+		grabConfig.TlsVersion = ztls.VersionTLS10
+		tlsVersion = "TLSv1.0"
+	case "TLSV11", "TLSV1.1":
+		grabConfig.TlsVersion = ztls.VersionTLS11
+		tlsVersion = "TLSv1.1"
+	case "", "TLSV12", "TLSV1.2":
+		grabConfig.TlsVersion = ztls.VersionTLS12
+		tlsVersion = "TLSv1.2"
+	default:
+		log.Fatal("Invalid SSL/TLS versions")
+	}
 
 	// STARTTLS cannot be used with TLS
 	if grabConfig.StartTls && grabConfig.Tls {
@@ -116,7 +150,7 @@ func init() {
 	// Set mail type
 
 	// Heartbleed requires STARTTLS or TLS
-	if (grabConfig.Heartbleed && !(grabConfig.StartTls || grabConfig.Tls)) {
+	if grabConfig.Heartbleed && !(grabConfig.StartTls || grabConfig.Tls) {
 		log.Fatal("Must specify one of --tls or --starttls for --heartbleed")
 	}
 
@@ -147,18 +181,35 @@ func init() {
 	// Check the network interface
 	var err error
 	/*
-	if interfaceName != "" {
-		var iface *net.Interface
-		if iface, err = net.InterfaceByName(interfaceName); err != nil {
-			log.Fatal("Error: Invalid network interface: ", interfaceName)
+		if interfaceName != "" {
+			var iface *net.Interface
+			if iface, err = net.InterfaceByName(interfaceName); err != nil {
+				log.Fatal("Error: Invalid network interface: ", interfaceName)
+			}
+			var addrs []net.Addr
+			if addrs, err = iface.Addrs(); err != nil || len(addrs) == 0 {
+				log.Fatal("Error: No addresses for interface ", interfaceName)
+			}
+			grabConfig.LocalAddr = addrs[0]
 		}
-		var addrs []net.Addr
-		if addrs, err = iface.Addrs(); err != nil || len(addrs) == 0 {
-			log.Fatal("Error: No addresses for interface ", interfaceName)
-		}
-		grabConfig.LocalAddr = addrs[0]
-	}
 	*/
+
+	// Look at CA file
+	if rootCAFileName != "" {
+		var fd *os.File
+		if fd, err = os.Open(rootCAFileName); err != nil {
+			log.Fatal(err)
+		}
+		caBytes, readErr := ioutil.ReadAll(fd)
+		if readErr != nil {
+			log.Fatal(err)
+		}
+		grabConfig.RootCAPool = x509.NewCertPool()
+		ok := grabConfig.RootCAPool.AppendCertsFromPEM(caBytes)
+		if !ok {
+			log.Fatal("Could not read certificates from PEM file. Invalid PEM?")
+		}
+	}
 
 	// Open input and output files
 	switch inputFileName {
@@ -222,20 +273,36 @@ func init() {
 	grabConfig.ErrorLog = logger
 }
 
-func ReadInput(addrChan chan net.IP, inputFile *os.File) {
-	scanner := bufio.NewScanner(inputFile)
-	for scanner.Scan() {
-		ipString := scanner.Text()
+func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
+	r := csv.NewReader(inputFile)
+	for {
+		row, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Printf("Error reading stdin: %s", err.Error())
+		}
+		// Ignore blank lines
+		if len(row) < 1 {
+			continue
+		}
+		ipString := row[0]
 		ip := net.ParseIP(ipString)
 		if ip == nil {
 			fmt.Fprintln(os.Stderr, "Invalid IP address: ", ipString)
 			continue
 		}
+		var domain string
+		if len(row) >= 2 {
+			domain = row[1]
+		}
+		remoteHost := banner.GrabTarget{
+			Addr:   ip,
+			Domain: domain,
+		}
 
-		addrChan <- ip
-	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "Reading stdin: ", err)
+		addrChan <- remoteHost
 	}
 	close(addrChan)
 }
@@ -247,17 +314,19 @@ func (s *Summary) AddProgress(p *banner.Progress) {
 }
 
 func main() {
-	addrChan := make(chan net.IP, senders*4)
+	addrChan := make(chan banner.GrabTarget, senders*4)
 	grabChan := make(chan banner.Grab, senders*4)
 	doneChan := make(chan banner.Progress)
 	outputDoneChan := make(chan int)
 
-	s := Summary {
-		Start: time.Now(),
-		Protocol: grabConfig.Protocol,
-		Port: grabConfig.Port,
-		Timeout: timeout,
-		Mail: mailStrPtr,
+	s := Summary{
+		Start:      time.Now(),
+		Protocol:   grabConfig.Protocol,
+		Port:       grabConfig.Port,
+		Timeout:    timeout,
+		Mail:       mailStrPtr,
+		TlsVersion: tlsVersion,
+		CAFileName: rootCAFileName,
 	}
 
 	go banner.WriteOutput(grabChan, outputDoneChan, &outputConfig)
@@ -268,7 +337,7 @@ func main() {
 
 	// Wait for grabbers to finish
 	for i := uint(0); i < senders; i += 1 {
-		finalProgress := <- doneChan
+		finalProgress := <-doneChan
 		s.AddProgress(&finalProgress)
 	}
 	close(grabChan)
@@ -276,7 +345,7 @@ func main() {
 	s.End = time.Now()
 	s.Duration = s.End.Sub(s.Start) / time.Second
 
-	<- outputDoneChan
+	<-outputDoneChan
 	close(outputDoneChan)
 
 	if inputFile != os.Stdin {
