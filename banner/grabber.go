@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"crypto/x509"
 	"log"
-	"net"
+	"../znet"
 	"strconv"
 	"time"
 )
 
 type GrabTarget struct {
-	Addr   net.IP
+	Addr   znet.IP
 	Domain string
 }
 
@@ -33,7 +33,7 @@ type GrabConfig struct {
 	EhloDomain   string
 	Protocol     string
 	ErrorLog     *log.Logger
-	LocalAddr    net.Addr
+	LocalAddr    znet.Addr
 	RootCAPool   *x509.CertPool
 	CbcOnly      bool
 }
@@ -60,7 +60,7 @@ func makeDialer(c *GrabConfig) func(string) (*Conn, error) {
 		d := Dialer{
 			Deadline: deadline,
 		}
-		conn, err := d.Dial(proto, addr)
+		conn, err := d.Dial(proto, addr, "")
 		conn.maxTlsVersion = c.TlsVersion
 		if err == nil {
 			conn.SetDeadline(deadline)
@@ -103,7 +103,7 @@ func makeGrabber(config *GrabConfig) func(*Conn) ([]StateLog, error) {
 			}
 		}
 		if config.SendMessage {
-			host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			host, _, _ := znet.SplitHostPort(c.RemoteAddr().String())
 			msg := bytes.Replace(config.Message, []byte("%s"), []byte(host), -1)
 			msg = bytes.Replace(msg, []byte("%d"), []byte(c.domain), -1)
 			if _, err := c.Write(msg); err != nil {
@@ -170,7 +170,7 @@ func GrabBanner(addrChan chan GrabTarget, grabChan chan Grab, doneChan chan Prog
 			d := target.Domain
 			domain = &d
 		}
-		rhost := net.JoinHostPort(addr, port)
+		rhost := znet.JoinHostPort(addr, port)
 		t := time.Now()
 		conn, dialErr := dial(rhost)
 		if domain != nil {

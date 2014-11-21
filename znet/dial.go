@@ -53,7 +53,7 @@ type Dialer struct {
 
 	// string that specifies the network interface to bind the
 	// connection to.
-    intrface string
+    	Intrface string
 }
 
 // Return either now+Timeout or Deadline, whichever comes first.

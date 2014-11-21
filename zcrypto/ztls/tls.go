@@ -13,15 +13,15 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"net"
 	"strings"
+	"../../znet"
 )
 
 // Server returns a new TLS server side connection
 // using conn as the underlying transport.
 // The configuration config must be non-nil and must have
 // at least one certificate.
-func Server(conn net.Conn, config *Config) *Conn {
+func Server(conn znet.Conn, config *Config) *Conn {
 	return &Conn{conn: conn, config: config}
 }
 
@@ -30,19 +30,19 @@ func Server(conn net.Conn, config *Config) *Conn {
 // Client interprets a nil configuration as equivalent to
 // the zero configuration; see the documentation of Config
 // for the defaults.
-func Client(conn net.Conn, config *Config) *Conn {
+func Client(conn znet.Conn, config *Config) *Conn {
 	return &Conn{conn: conn, config: config, isClient: true}
 }
 
-// A listener implements a network listener (net.Listener) for TLS connections.
+// A listener implements a network listener (znet.Listener) for TLS connections.
 type listener struct {
-	net.Listener
+	znet.Listener
 	config *Config
 }
 
 // Accept waits for and returns the next incoming TLS connection.
 // The returned connection c is a *tls.Conn.
-func (l *listener) Accept() (c net.Conn, err error) {
+func (l *listener) Accept() (c znet.Conn, err error) {
 	c, err = l.Listener.Accept()
 	if err != nil {
 		return
@@ -55,7 +55,7 @@ func (l *listener) Accept() (c net.Conn, err error) {
 // Listener and wraps each connection with Server.
 // The configuration config must be non-nil and must have
 // at least one certificate.
-func NewListener(inner net.Listener, config *Config) net.Listener {
+func NewListener(inner znet.Listener, config *Config) znet.Listener {
 	l := new(listener)
 	l.Listener = inner
 	l.config = config
@@ -66,11 +66,11 @@ func NewListener(inner net.Listener, config *Config) net.Listener {
 // given network address using net.Listen.
 // The configuration config must be non-nil and must have
 // at least one certificate.
-func Listen(network, laddr string, config *Config) (net.Listener, error) {
+func Listen(network, laddr string, config *Config, intrface string) (znet.Listener, error) {
 	if config == nil || len(config.Certificates) == 0 {
 		return nil, errors.New("tls.Listen: no certificates in configuration")
 	}
-	l, err := net.Listen(network, laddr)
+	l, err := znet.Listen(network, laddr, intrface)
 	if err != nil {
 		return nil, err
 	}
@@ -83,9 +83,9 @@ func Listen(network, laddr string, config *Config) (net.Listener, error) {
 // Dial interprets a nil configuration as equivalent to
 // the zero configuration; see the documentation of Config
 // for the defaults.
-func Dial(network, addr string, config *Config) (*Conn, error) {
+func Dial(network, addr string, config *Config, intrface string) (*Conn, error) {
 	raddr := addr
-	c, err := net.Dial(network, raddr)
+	c, err := znet.Dial(network, raddr, intrface)
 	if err != nil {
 		return nil, err
 	}

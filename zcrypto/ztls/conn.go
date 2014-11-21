@@ -13,16 +13,16 @@ import (
 	"crypto/x509"
 	"errors"
 	"io"
-	"net"
 	"sync"
 	"time"
+	"../../znet"
 )
 
 // A Conn represents a secured connection.
 // It implements the net.Conn interface.
 type Conn struct {
 	// constant
-	conn     net.Conn
+	conn     znet.Conn
 	isClient bool
 
 	// constant after handshake; protected by handshakeMutex
@@ -138,12 +138,12 @@ func (e *connErr) error() error {
 // export the struct field too.
 
 // LocalAddr returns the local network address.
-func (c *Conn) LocalAddr() net.Addr {
+func (c *Conn) LocalAddr() znet.Addr {
 	return c.conn.LocalAddr()
 }
 
 // RemoteAddr returns the remote network address.
-func (c *Conn) RemoteAddr() net.Addr {
+func (c *Conn) RemoteAddr() znet.Addr {
 	return c.conn.RemoteAddr()
 }
 
@@ -599,7 +599,7 @@ Again:
 		// if err == io.EOF {
 		// 	err = io.ErrUnexpectedEOF
 		// }
-		if e, ok := err.(net.Error); !ok || !e.Temporary() {
+		if e, ok := err.(znet.Error); !ok || !e.Temporary() {
 			c.setError(err)
 		}
 		return err
@@ -640,7 +640,7 @@ Again:
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
-		if e, ok := err.(net.Error); !ok || !e.Temporary() {
+		if e, ok := err.(znet.Error); !ok || !e.Temporary() {
 			c.setError(err)
 		}
 		return err
@@ -679,7 +679,7 @@ Again:
 			c.in.freeBlock(b)
 			goto Again
 		case alertLevelError:
-			c.setError(&net.OpError{Op: "remote error", Err: alert(data[1])})
+			c.setError(&znet.OpError{Op: "remote error", Err: alert(data[1])})
 		default:
 			c.sendAlert(alertUnexpectedMessage)
 		}
@@ -737,7 +737,7 @@ func (c *Conn) sendAlertLocked(err alert) error {
 	c.writeRecord(recordTypeAlert, c.tmp[0:2])
 	// closeNotify is a special case in that it isn't an error:
 	if err != alertCloseNotify {
-		return c.setError(&net.OpError{Op: "local error", Err: err})
+		return c.setError(&znet.OpError{Op: "local error", Err: err})
 	}
 	return nil
 }
@@ -823,7 +823,7 @@ func (c *Conn) writeRecord(typ recordType, data []byte) (n int, err error) {
 			c.tmp[0] = alertLevelError
 			c.tmp[1] = byte(err.(alert))
 			c.writeRecord(recordTypeAlert, c.tmp[0:2])
-			return n, c.setError(&net.OpError{Op: "local error", Err: err})
+			return n, c.setError(&znet.OpError{Op: "local error", Err: err})
 		}
 	}
 	return

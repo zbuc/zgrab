@@ -1,7 +1,7 @@
 package banner
 
 import (
-	"zgrab/zcrypto/ztls"
+	"../zcrypto/ztls"
 )
 
 type StateLog struct {

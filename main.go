@@ -9,12 +9,12 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
+	"./znet"
 	"os"
 	"strings"
 	"time"
-	"zgrab/banner"
-	"zgrab/zcrypto/ztls"
+	"./banner"
+	"./zcrypto/ztls"
 )
 
 // Command-line flags
@@ -182,11 +182,11 @@ func init() {
 	var err error
 	/*
 		if interfaceName != "" {
-			var iface *net.Interface
-			if iface, err = net.InterfaceByName(interfaceName); err != nil {
+			var iface *znet.Interface
+			if iface, err = znet.InterfaceByName(interfaceName); err != nil {
 				log.Fatal("Error: Invalid network interface: ", interfaceName)
 			}
-			var addrs []net.Addr
+			var addrs []znet.Addr
 			if addrs, err = iface.Addrs(); err != nil || len(addrs) == 0 {
 				log.Fatal("Error: No addresses for interface ", interfaceName)
 			}
@@ -288,7 +288,7 @@ func ReadInput(addrChan chan banner.GrabTarget, inputFile *os.File) {
 			continue
 		}
 		ipString := row[0]
-		ip := net.ParseIP(ipString)
+		ip := znet.ParseIP(ipString)
 		if ip == nil {
 			fmt.Fprintln(os.Stderr, "Invalid IP address: ", ipString)
 			continue

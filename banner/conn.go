@@ -4,11 +4,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net"
+	"../znet"
 	"regexp"
 	"time"
 
-	"zgrab/zcrypto/ztls"
+	"../zcrypto/ztls"
 )
 
 var smtpEndRegex = regexp.MustCompile(`(?:\r\n)|^[0-9]{3} .+\r\n$`)
@@ -19,10 +19,10 @@ const SMTP_COMMAND = "STARTTLS\r\n"
 const POP3_COMMAND = "STLS\r\n"
 const IMAP_COMMAND = "a001 STARTTLS\r\n"
 
-// Implements the net.Conn interface
+// Implements the znet.Conn interface
 type Conn struct {
 	// Underlying network connection
-	conn    net.Conn
+	conn    znet.Conn
 	tlsConn *ztls.Conn
 	isTls   bool
 
@@ -42,7 +42,7 @@ type Conn struct {
 	domain string
 }
 
-func (c *Conn) getUnderlyingConn() net.Conn {
+func (c *Conn) getUnderlyingConn() znet.Conn {
 	if c.isTls {
 		return c.tlsConn
 	}
@@ -62,11 +62,11 @@ func (c *Conn) SetDomain(domain string) {
 }
 
 // Layer in the regular conn methods
-func (c *Conn) LocalAddr() net.Addr {
+func (c *Conn) LocalAddr() znet.Addr {
 	return c.getUnderlyingConn().LocalAddr()
 }
 
-func (c *Conn) RemoteAddr() net.Addr {
+func (c *Conn) RemoteAddr() znet.Addr {
 	return c.getUnderlyingConn().RemoteAddr()
 }
 
