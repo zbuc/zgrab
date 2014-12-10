@@ -327,17 +327,33 @@ func (c *Conn) CheckHeartbleed(b []byte) (int, error) {
 	return n, err
 }
 
-func (c *Conn) SendModbusEcho(b []byte) (int, error) {
-	// TODO MODBUS
-	// Build a request
+func (c *Conn) SendModbusEcho(b []byte) (huh int, err error) {
+	req := ModbusRequest {
+		Function: ModbusFunctionEncapsulatedInterface,
+		Data: []byte {
+			0x0E, // read device info
+			0x01, // product code
+			0x00, // object id, should always be 0 in initial request
+		},
+	}
 
-	// Send it out
+	data, err := req.MarshalBinary()
+	written, err := c.Write(data) // TODO verify write
+	if err != nil || written != len(data) {
+		return
+	}
 
-	// Read the response
+	res, err := c.GetModbusResponse()
+
+	if res.Function.IsException() {
+		//TODO should convert to ModbusException
+	} else {
+		//TODO log this
+	}
 
 	// make sure the whole thing gets appended to the operation log
 	// e.g. c.appendEvent(modbusEvent, modbusError)
-	return 0, nil
+	return
 }
 
 func (c *Conn) States() []ConnectionEvent {

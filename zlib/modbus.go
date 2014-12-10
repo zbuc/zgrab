@@ -1,6 +1,11 @@
 package zlib
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+)
 
 type ModbusEvent struct {
 	Response []byte
@@ -44,14 +49,85 @@ type ModbusRequest struct {
 	Data     []byte
 }
 
+func (r *ModbusRequest) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 7 + 1 + len(r.Data))
+	copy(data[0:4], ModbusHeaderBytes)
+	msglen := len(r.Data) + 2 // unit ID and function
+	binary.BigEndian.PutUint16(data[4:6], uint16(msglen))
+
+	data[7] = byte(r.Function)
+	copy(data[8:], r.Data)
+
+	return
+}
+
 type ModbusResponse struct {
 	Function FunctionCode
 	Data     []byte
 }
 
+func (c *Conn) ReadMin(res []byte, bytes int) (cnt int, err error) {
+	for cnt < bytes {
+		var n int
+		n, err = c.Read(res[cnt:])
+		cnt += n
+
+		if err != nil && cnt >= len(res) {
+			err = fmt.Errorf("modbus: response buffer too small")
+		}
+
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
+	var cnt int
+	buf := make([]byte, 1024) // should be more memory than we need
+
+	cnt, err = c.ReadMin(buf, 6)
+	if err != nil {
+		err = fmt.Errorf("modbus: could not get response: %e", err)
+		return
+	}
+
+	// first 4 bytes should be known, verify them
+	if !bytes.Equal(buf[0:4], ModbusHeaderBytes) {
+		err = fmt.Errorf("modbus: not a modbus response")
+		return
+	}
+
+	msglen := int(binary.BigEndian.Uint16(buf[4:6]))
+
+	for cnt < msglen + 6 {
+		var n int
+		n, err = c.Read(buf[cnt:])
+		cnt += n
+
+		if err != nil && cnt >= len(buf) {
+			err = fmt.Errorf("modbus: resporse buffer too small")
+		}
+
+		if err != nil {
+			return
+		}
+	}
+
+	//TODO this really should be done by a more elegant unmarshaling function
+	res = ModbusResponse {
+		Function: FunctionCode(buf[7]),
+		Data: buf[8:],
+	}
+
+	return
+}
+
 type ModbusException struct {
 	Function      ExceptionFunctionCode
-	ExceptionType byte
+	ExceptionType ExceptionCode
 }
 
 func (e ExceptionFunctionCode) FunctionCode() FunctionCode {
@@ -64,4 +140,13 @@ func (c FunctionCode) ExceptionFunctionCode() ExceptionFunctionCode {
 	return ExceptionFunctionCode(code)
 }
 
-var ModbusReadDeviceIDRequest = []byte{0x2B, 0x0E, 0x01, 0x00}
+func (c FunctionCode) IsException() bool {
+	return (byte(c) & 0x80) == 0x80
+}
+
+var ModbusHeaderBytes = []byte {
+	0x13, 0x37, // do not matter, will just be verifying they are the same
+	0x00, 0x00, // must be 0
+}
+
+var ModbusFunctionEncapsulatedInterface = FunctionCode(0x2B)
