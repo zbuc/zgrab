@@ -1,6 +1,9 @@
 package zlib
 
-import "ztools/processing"
+import (
+	"log"
+	"ztools/processing"
+)
 
 // GrabWorker implements ztools.processing.Worker
 type GrabWorker struct {
@@ -41,6 +44,7 @@ func (g *GrabWorker) MakeHandler(id uint) processing.Handler {
 		if !ok {
 			return nil
 		}
+		log.Print(*g.config)
 		grab := GrabBanner(g.config, &target)
 		s := grab.status()
 		g.statuses <- s

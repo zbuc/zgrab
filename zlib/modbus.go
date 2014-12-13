@@ -8,6 +8,7 @@ import (
 )
 
 type ModbusEvent struct {
+	Function FunctionCode
 	Response []byte
 }
 
@@ -21,11 +22,13 @@ func (m *ModbusEvent) GetType() EventType {
 }
 
 type encodedModbusEvent struct {
-	Response []byte `json:"response"`
+	Function FunctionCode `json:"function_code"`
+	Response []byte       `json:"response"`
 }
 
 func (m *ModbusEvent) MarshalJSON() ([]byte, error) {
 	e := encodedModbusEvent{
+		Function: m.Function,
 		Response: m.Response,
 	}
 	return json.Marshal(&e)
@@ -36,6 +39,7 @@ func (m *ModbusEvent) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, e); err != nil {
 		return err
 	}
+	m.Function = e.Function
 	m.Response = e.Response
 	return nil
 }
@@ -50,7 +54,7 @@ type ModbusRequest struct {
 }
 
 func (r *ModbusRequest) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, 7 + 1 + len(r.Data))
+	data = make([]byte, 7+1+len(r.Data))
 	copy(data[0:4], ModbusHeaderBytes)
 	msglen := len(r.Data) + 2 // unit ID and function
 	binary.BigEndian.PutUint16(data[4:6], uint16(msglen))
@@ -69,7 +73,7 @@ type ModbusResponse struct {
 func (c *Conn) ReadMin(res []byte, bytes int) (cnt int, err error) {
 	for cnt < bytes {
 		var n int
-		n, err = c.Read(res[cnt:])
+		n, err = c.getUnderlyingConn().Read(res[cnt:])
 		cnt += n
 
 		if err != nil && cnt >= len(res) {
@@ -102,9 +106,9 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 
 	msglen := int(binary.BigEndian.Uint16(buf[4:6]))
 
-	for cnt < msglen + 6 {
+	for cnt < msglen+6 {
 		var n int
-		n, err = c.Read(buf[cnt:])
+		n, err = c.getUnderlyingConn().Read(buf[cnt:])
 		cnt += n
 
 		if err != nil && cnt >= len(buf) {
@@ -117,9 +121,9 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	}
 
 	//TODO this really should be done by a more elegant unmarshaling function
-	res = ModbusResponse {
+	res = ModbusResponse{
 		Function: FunctionCode(buf[7]),
-		Data: buf[8:],
+		Data:     buf[8:],
 	}
 
 	return
@@ -144,7 +148,7 @@ func (c FunctionCode) IsException() bool {
 	return (byte(c) & 0x80) == 0x80
 }
 
-var ModbusHeaderBytes = []byte {
+var ModbusHeaderBytes = []byte{
 	0x13, 0x37, // do not matter, will just be verifying they are the same
 	0x00, 0x00, // must be 0
 }
