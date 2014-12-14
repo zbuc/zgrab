@@ -91,24 +91,27 @@ func (c *Conn) ReadMin(res []byte, bytes int) (cnt int, err error) {
 func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	var cnt int
 	buf := make([]byte, 1024) // should be more memory than we need
+	header := buf[0:7]
+	buf = buf[7:]
 
-	cnt, err = c.ReadMin(buf, 6)
+	cnt, err = c.ReadMin(header, 7)
 	if err != nil {
 		err = fmt.Errorf("modbus: could not get response: %e", err)
 		return
 	}
 
 	// first 4 bytes should be known, verify them
-	if !bytes.Equal(buf[0:4], ModbusHeaderBytes) {
+	if !bytes.Equal(header[0:4], ModbusHeaderBytes) {
 		err = fmt.Errorf("modbus: not a modbus response")
 		return
 	}
 
-	msglen := int(binary.BigEndian.Uint16(buf[4:6]))
+	msglen := int(binary.BigEndian.Uint16(header[4:6]))
 
-	for cnt < msglen+6 {
+	// One of the bytes in length counts as part of the header
+	for cnt < msglen-1 {
 		var n int
-		n, err = c.getUnderlyingConn().Read(buf[cnt:])
+		n, err = c.getUnderlyingConn().Read(buf)
 		cnt += n
 
 		if err != nil && cnt >= len(buf) {
@@ -122,8 +125,8 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 
 	//TODO this really should be done by a more elegant unmarshaling function
 	res = ModbusResponse{
-		Function: FunctionCode(buf[7]),
-		Data:     buf[8:],
+		Function: FunctionCode(buf[0]),
+		Data:     buf[1:],
 	}
 
 	return
