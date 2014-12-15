@@ -118,11 +118,11 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 		cnt += n
 
 		if err != nil && cnt >= len(buf) {
-			err = fmt.Errorf("modbus: resporse buffer too small")
+			err = fmt.Errorf("modbus: response buffer too small")
 		}
 
 		if err != nil {
-			return
+			break
 		}
 	}
 
