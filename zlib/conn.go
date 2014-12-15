@@ -337,14 +337,18 @@ func (c *Conn) SendModbusEcho() (int, error) {
 		},
 	}
 
+	event := new(ModbusEvent)
 	data, err := req.MarshalBinary()
-	written, err := c.getUnderlyingConn().Write(data) // TODO verify write
-	if err != nil {
-		c.appendEvent(nil, err)
-		return written, errors.New("Could not write modbus request")
+	w := 0
+	for w < len(data) {
+		written, err := c.getUnderlyingConn().Write(data[w:]) // TODO verify write
+		w += written
+		if err != nil {
+			c.appendEvent(event, err)
+			return w, errors.New("Could not write modbus request")
+		}
 	}
 
-	event := new(ModbusEvent)
 	res, err := c.GetModbusResponse()
 	if err == nil {
 		event.Function = res.Function
@@ -352,7 +356,7 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	}
 	// make sure the whole thing gets appended to the operation log
 	c.appendEvent(event, err)
-	return written, err
+	return w, err
 }
 
 func (c *Conn) States() []ConnectionEvent {

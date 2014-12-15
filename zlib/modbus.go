@@ -58,10 +58,9 @@ func (r *ModbusRequest) MarshalBinary() (data []byte, err error) {
 	copy(data[0:4], ModbusHeaderBytes)
 	msglen := len(r.Data) + 2 // unit ID and function
 	binary.BigEndian.PutUint16(data[4:6], uint16(msglen))
-
+	data[6] = 0
 	data[7] = byte(r.Function)
 	copy(data[8:], r.Data)
-
 	return
 }
 
@@ -126,7 +125,7 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	//TODO this really should be done by a more elegant unmarshaling function
 	res = ModbusResponse{
 		Function: FunctionCode(buf[0]),
-		Data:     buf[1:],
+		Data:     buf[1 : msglen-2],
 	}
 
 	return

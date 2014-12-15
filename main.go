@@ -227,7 +227,6 @@ func init() {
 }
 
 func main() {
-	zlog.Debug(config.Modbus)
 	decoder := zlib.NewGrabTargetDecoder(inputFile)
 	encoder := json.NewEncoder(outputConfig.OutputFile)
 	worker := zlib.NewGrabWorker(&config)
