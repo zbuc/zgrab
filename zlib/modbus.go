@@ -95,7 +95,7 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 
 	cnt, err = c.ReadMin(header, 7)
 	if err != nil {
-		err = fmt.Errorf("modbus: could not get response: %e", err)
+		err = fmt.Errorf("modbus: could not get response: %s", err.Error())
 		return
 	}
 
