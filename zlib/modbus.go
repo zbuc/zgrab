@@ -8,6 +8,8 @@ import (
 )
 
 type ModbusEvent struct {
+	Length   int
+	UnitID   int
 	Function FunctionCode
 	Response []byte
 }
@@ -22,12 +24,16 @@ func (m *ModbusEvent) GetType() EventType {
 }
 
 type encodedModbusEvent struct {
+	Length   int          `json:"length"`
+	UnitID   int          `json:"unit_id"`
 	Function FunctionCode `json:"function_code"`
 	Response []byte       `json:"response"`
 }
 
 func (m *ModbusEvent) MarshalJSON() ([]byte, error) {
 	e := encodedModbusEvent{
+		Length:   m.Length,
+		UnitID:   m.UnitID,
 		Function: m.Function,
 		Response: m.Response,
 	}
@@ -39,6 +45,7 @@ func (m *ModbusEvent) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, e); err != nil {
 		return err
 	}
+	m.Length = e.Length
 	m.Function = e.Function
 	m.Response = e.Response
 	return nil
@@ -65,6 +72,8 @@ func (r *ModbusRequest) MarshalBinary() (data []byte, err error) {
 }
 
 type ModbusResponse struct {
+	Length   int
+	UnitID   int
 	Function FunctionCode
 	Data     []byte
 }
@@ -106,6 +115,7 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	}
 
 	msglen := int(binary.BigEndian.Uint16(header[4:6]))
+	unitID := int(header[6])
 
 	cnt = 0
 	if msglen > len(buf) {
@@ -132,6 +142,8 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 
 	//TODO this really should be done by a more elegant unmarshaling function
 	res = ModbusResponse{
+		Length:   msglen,
+		UnitID:   unitID,
 		Function: FunctionCode(buf[0]),
 		Data:     buf[1:cnt],
 	}
