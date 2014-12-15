@@ -108,9 +108,10 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	msglen := int(binary.BigEndian.Uint16(header[4:6]))
 
 	// One of the bytes in length counts as part of the header
+	cnt = 0
 	for cnt < msglen-1 {
 		var n int
-		n, err = c.getUnderlyingConn().Read(buf)
+		n, err = c.getUnderlyingConn().Read(buf[cnt:])
 		cnt += n
 
 		if err != nil && cnt >= len(buf) {
@@ -125,7 +126,7 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 	//TODO this really should be done by a more elegant unmarshaling function
 	res = ModbusResponse{
 		Function: FunctionCode(buf[0]),
-		Data:     buf[1 : msglen-2],
+		Data:     buf[1:cnt],
 	}
 
 	return

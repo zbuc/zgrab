@@ -350,10 +350,8 @@ func (c *Conn) SendModbusEcho() (int, error) {
 	}
 
 	res, err := c.GetModbusResponse()
-	if err == nil {
-		event.Function = res.Function
-		event.Response = res.Data
-	}
+	event.Function = res.Function
+	event.Response = res.Data
 	// make sure the whole thing gets appended to the operation log
 	c.appendEvent(event, err)
 	return w, err
