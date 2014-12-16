@@ -140,12 +140,17 @@ func (c *Conn) GetModbusResponse() (res ModbusResponse, err error) {
 		cnt = len(buf)
 	}
 
+	var d []byte
+	if cnt > 1 {
+		d = buf[1:cnt]
+	}
+
 	//TODO this really should be done by a more elegant unmarshaling function
 	res = ModbusResponse{
 		Length:   msglen,
 		UnitID:   unitID,
 		Function: FunctionCode(buf[0]),
-		Data:     buf[1:cnt],
+		Data:     d,
 	}
 
 	return
